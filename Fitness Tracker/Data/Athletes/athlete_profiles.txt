@@ -1,0 +1,3 @@
+Athlete 1: Beginner - Irregular, low intensity
+Athlete 2: Intermediate - Consistent, moderate intensity
+Athlete 3: Advanced - Highly trained, high intensity
