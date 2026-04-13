@@ -1,0 +1,182 @@
+%% HEART RATE ZONE ANALYSIS
+% Purpose: Analyze fitness tracker data for three athletes
+% Team Members: Kylor Ghai
+% Inputs: Athlete CSV files
+% Outputs: Summary tables and saved results
+
+%% Setup
+
+clear
+clc
+
+% Create file paths
+dataFolder = fullfile('Data','Athletes');
+resultsFolder = fullfile('Results');
+
+if ~exist(resultsFolder, 'dir')
+    mkdir(resultsFolder);
+end
+
+
+%% Task 1: Load Data
+
+athlete1 = readtable(fullfile(dataFolder,'athlete1_beginner.csv'));
+athlete2 = readtable(fullfile(dataFolder,'athlete2_intermediate.csv'));
+athlete3 = readtable(fullfile(dataFolder,'athlete3_advanced.csv'));
+
+% Verify loading
+disp(size(athlete1))
+disp(athlete1.Properties.VariableNames)
+
+
+%% Task 2: Heart Rate Zone Categorization
+
+% Function-style logic using logical indexing
+
+zones1 = strings(height(athlete1),1);
+
+for i = 1:height(athlete1)
+
+    hr = athlete1.PostWorkoutHR(i);
+
+    if hr < 100
+        zones1(i) = "Resting";
+
+    elseif hr <= 130
+        zones1(i) = "Light";
+
+    elseif hr <= 160
+        zones1(i) = "Moderate";
+
+    else
+        zones1(i) = "Vigorous";
+    end
+
+end
+
+athlete1.Zone = zones1;
+
+
+%% Repeat Zone Logic for Other Athletes
+
+zones2 = strings(height(athlete2),1);
+zones3 = strings(height(athlete3),1);
+
+% Athlete 2
+for i = 1:height(athlete2)
+
+    hr = athlete2.PostWorkoutHR(i);
+
+    if hr < 100
+        zones2(i) = "Resting";
+    elseif hr <= 130
+        zones2(i) = "Light";
+    elseif hr <= 160
+        zones2(i) = "Moderate";
+    else
+        zones2(i) = "Vigorous";
+    end
+
+end
+
+athlete2.Zone = zones2;
+
+
+% Athlete 3
+for i = 1:height(athlete3)
+
+    hr = athlete3.PostWorkoutHR(i);
+
+    if hr < 100
+        zones3(i) = "Resting";
+    elseif hr <= 130
+        zones3(i) = "Light";
+    elseif hr <= 160
+        zones3(i) = "Moderate";
+    else
+        zones3(i) = "Vigorous";
+    end
+
+end
+
+athlete3.Zone = zones3;
+
+
+%% Task 3: Calculate Time in Each Zone
+
+zones = ["Resting","Light","Moderate","Vigorous"];
+
+timeMatrix = zeros(3,4);
+
+for z = 1:4
+
+    timeMatrix(1,z) = sum( ...
+        athlete1.Duration(athlete1.Zone == zones(z)));
+
+    timeMatrix(2,z) = sum( ...
+        athlete2.Duration(athlete2.Zone == zones(z)));
+
+    timeMatrix(3,z) = sum( ...
+        athlete3.Duration(athlete3.Zone == zones(z)));
+
+end
+
+
+%% Task 4: Calculate Recovery Rate
+
+% Remove rest days
+a1_work = athlete1(athlete1.Duration > 0,:);
+a2_work = athlete2(athlete2.Duration > 0,:);
+a3_work = athlete3(athlete3.Duration > 0,:);
+
+rec1 = mean(a1_work.PostWorkoutHR - a1_work.PreWorkoutHR);
+rec2 = mean(a2_work.PostWorkoutHR - a2_work.PreWorkoutHR);
+rec3 = mean(a3_work.PostWorkoutHR - a3_work.PreWorkoutHR);
+
+recoveryRates = [rec1 rec2 rec3];
+
+
+%% Task 5: Basic Statistics
+
+meanHR = [
+    mean(a1_work.PostWorkoutHR)
+    mean(a2_work.PostWorkoutHR)
+    mean(a3_work.PostWorkoutHR)
+];
+
+meanDuration = [
+    mean(a1_work.Duration)
+    mean(a2_work.Duration)
+    mean(a3_work.Duration)
+];
+
+consistency = [
+    std(a1_work.Intensity)
+    std(a2_work.Intensity)
+    std(a3_work.Intensity)
+];
+
+totalWorkouts = [
+    height(a1_work)
+    height(a2_work)
+    height(a3_work)
+];
+
+
+%% Task 6: Save Results
+
+athleteNames = ["Beginner";"Intermediate";"Advanced"];
+
+summaryTable = table( ...
+    athleteNames,...
+    meanHR,...
+    sum(timeMatrix,2),...
+    consistency,...
+    'VariableNames',...
+    {'Athlete','AvgHeartRate','TotalMinutes','Consistency'}
+);
+
+writetable(summaryTable, ...
+    fullfile(resultsFolder,'summary_results.csv'));
+
+save(fullfile(resultsFolder,'analysis_results.mat'));
