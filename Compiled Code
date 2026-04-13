@@ -1,0 +1,341 @@
+%% HEART RATE ZONE ANALYSIS MASTER SCRIPT
+% Students A, B, C Combined
+% Student B (Main Analysis): Kylor Ghai
+
+%% ============================================
+%% Student A — Verify Required Files
+%% ============================================
+
+clear
+clc
+
+dataFolder = fullfile('Data','Athletes');
+resultsFolder = fullfile('Results');
+figFolder = fullfile(resultsFolder,'Figures');
+
+files = {
+    'athlete1_beginner.csv'
+    'athlete2_intermediate.csv'
+    'athlete3_advanced.csv'
+};
+
+for i = 1:length(files)
+    if ~isfile(fullfile(dataFolder, files{i}))
+        error(['Missing file: ', files{i}]);
+    end
+end
+
+% Create folders if needed
+if ~exist(resultsFolder,'dir')
+    mkdir(resultsFolder);
+end
+
+if ~exist(figFolder,'dir')
+    mkdir(figFolder);
+end
+
+
+%% ============================================
+%% Student B — Load Data
+%% ============================================
+
+athlete1 = readtable(fullfile(dataFolder,'athlete1_beginner.csv'));
+athlete2 = readtable(fullfile(dataFolder,'athlete2_intermediate.csv'));
+athlete3 = readtable(fullfile(dataFolder,'athlete3_advanced.csv'));
+
+
+%% ============================================
+%% Student B — Heart Rate Zones
+%% ============================================
+
+zones1 = strings(height(athlete1),1);
+zones2 = strings(height(athlete2),1);
+zones3 = strings(height(athlete3),1);
+
+for i = 1:height(athlete1)
+
+    hr = athlete1.PostWorkoutHR(i);
+
+    if hr < 100
+        zones1(i) = "Resting";
+    elseif hr <= 130
+        zones1(i) = "Light";
+    elseif hr <= 160
+        zones1(i) = "Moderate";
+    else
+        zones1(i) = "Vigorous";
+    end
+
+end
+
+athlete1.Zone = zones1;
+
+for i = 1:height(athlete2)
+
+    hr = athlete2.PostWorkoutHR(i);
+
+    if hr < 100
+        zones2(i) = "Resting";
+    elseif hr <= 130
+        zones2(i) = "Light";
+    elseif hr <= 160
+        zones2(i) = "Moderate";
+    else
+        zones2(i) = "Vigorous";
+    end
+
+end
+
+athlete2.Zone = zones2;
+
+for i = 1:height(athlete3)
+
+    hr = athlete3.PostWorkoutHR(i);
+
+    if hr < 100
+        zones3(i) = "Resting";
+    elseif hr <= 130
+        zones3(i) = "Light";
+    elseif hr <= 160
+        zones3(i) = "Moderate";
+    else
+        zones3(i) = "Vigorous";
+    end
+
+end
+
+athlete3.Zone = zones3;
+
+
+%% ============================================
+%% Student B — Time in Zones
+%% ============================================
+
+zones = ["Resting","Light","Moderate","Vigorous"];
+
+timeMatrix = zeros(3,4);
+
+for z = 1:4
+
+    timeMatrix(1,z) = sum( ...
+        athlete1.Duration(athlete1.Zone == zones(z)));
+
+    timeMatrix(2,z) = sum( ...
+        athlete2.Duration(athlete2.Zone == zones(z)));
+
+    timeMatrix(3,z) = sum( ...
+        athlete3.Duration(athlete3.Zone == zones(z)));
+
+end
+
+
+%% ============================================
+%% Student B — Recovery Rate
+%% ============================================
+
+a1_work = athlete1(athlete1.Duration > 0,:);
+a2_work = athlete2(athlete2.Duration > 0,:);
+a3_work = athlete3(athlete3.Duration > 0,:);
+
+rec1 = mean(a1_work.PostWorkoutHR - a1_work.PreWorkoutHR);
+rec2 = mean(a2_work.PostWorkoutHR - a2_work.PreWorkoutHR);
+rec3 = mean(a3_work.PostWorkoutHR - a3_work.PreWorkoutHR);
+
+recoveryRates = [rec1 rec2 rec3];
+
+
+%% ============================================
+%% Student B — Statistics
+%% ============================================
+
+meanHR = [
+    mean(a1_work.PostWorkoutHR)
+    mean(a2_work.PostWorkoutHR)
+    mean(a3_work.PostWorkoutHR)
+];
+
+consistency = [
+    std(a1_work.Intensity)
+    std(a2_work.Intensity)
+    std(a3_work.Intensity)
+];
+
+totalWorkouts = [
+    height(a1_work)
+    height(a2_work)
+    height(a3_work)
+];
+
+
+%% ============================================
+%% Student B — Save Summary Table
+%% ============================================
+
+athleteNames = ["Beginner";"Intermediate";"Advanced"];
+
+summaryTable = table( ...
+    athleteNames,...
+    meanHR,...
+    sum(timeMatrix,2),...
+    consistency,...
+    'VariableNames',...
+    {'Athlete','AvgHeartRate','TotalMinutes','Consistency'} ...
+);
+
+writetable(summaryTable, ...
+    fullfile(resultsFolder,'summary_results.csv'));
+
+
+%% ============================================
+%% Student C — Prepare Plot Variables
+%% ============================================
+
+timeInZones = timeMatrix;
+
+days = 1:height(athlete1);
+
+postHR_beg = athlete1.PostWorkoutHR;
+postHR_int = athlete2.PostWorkoutHR;
+postHR_adv = athlete3.PostWorkoutHR;
+
+meanRecoveryRates = recoveryRates;
+
+dur_beg = athlete1.Duration;
+dur_int = athlete2.Duration;
+dur_adv = athlete3.Duration;
+
+totalTime = sum(timeMatrix,2);
+
+avgIntensity = [
+    mean(athlete1.Intensity)
+    mean(athlete2.Intensity)
+    mean(athlete3.Intensity)
+];
+
+numWorkouts = totalWorkouts;
+
+intensityStdDev = consistency;
+
+athleteNamesCell = {'Beginner','Intermediate','Advanced'};
+
+
+%% ============================================
+%% Student C — Figure 1
+%% ============================================
+
+figure;
+
+bar(timeInZones,'grouped');
+
+title('Time Spent in Heart Rate Zones');
+
+xlabel('Athletes');
+
+ylabel('Time (minutes)');
+
+set(gca,'XTickLabel',athleteNamesCell);
+
+legend('Resting','Light','Moderate','Vigorous');
+
+saveas(gcf,fullfile(figFolder,'zone_comparison.png'));
+
+
+%% ============================================
+%% Student C — Figure 2
+%% ============================================
+
+figure;
+
+hold on;
+
+plot(days,postHR_beg,'-o','DisplayName','Beginner');
+plot(days,postHR_int,'-s','DisplayName','Intermediate');
+plot(days,postHR_adv,'-^','DisplayName','Advanced');
+
+hold off;
+
+title('Post-Workout Heart Rate Trends');
+
+xlabel('Day');
+
+ylabel('Heart Rate (bpm)');
+
+legend('show');
+
+grid on;
+
+saveas(gcf,fullfile(figFolder,'hr_trends.png'));
+
+
+%% ============================================
+%% Student C — Figure 3
+%% ============================================
+
+figure;
+
+bar(meanRecoveryRates);
+
+title('Recovery Rate Comparison');
+
+xlabel('Athletes');
+
+ylabel('HR Change');
+
+set(gca,'XTickLabel',athleteNamesCell);
+
+saveas(gcf,fullfile(figFolder,'recovery_comparison.png'));
+
+
+%% ============================================
+%% Student C — Figure 4
+%% ============================================
+
+figure;
+
+subplot(3,1,1);
+histogram(dur_beg(dur_beg>0),10);
+title('Beginner Duration');
+
+subplot(3,1,2);
+histogram(dur_int(dur_int>0),10);
+title('Intermediate Duration');
+
+subplot(3,1,3);
+histogram(dur_adv(dur_adv>0),10);
+title('Advanced Duration');
+
+saveas(gcf,fullfile(figFolder,'duration_distributions.png'));
+
+
+%% ============================================
+%% Student C — Dashboard
+%% ============================================
+
+figure('Position',[100 100 1200 800]);
+
+subplot(2,2,1);
+bar(totalTime);
+title('Total Workout Time');
+set(gca,'XTickLabel',athleteNamesCell);
+
+subplot(2,2,2);
+bar(avgIntensity);
+title('Average Intensity');
+set(gca,'XTickLabel',athleteNamesCell);
+
+subplot(2,2,3);
+bar(numWorkouts);
+title('Total Workouts');
+set(gca,'XTickLabel',athleteNamesCell);
+
+subplot(2,2,4);
+bar(intensityStdDev);
+title('Consistency');
+set(gca,'XTickLabel',athleteNamesCell);
+
+saveas(gcf,fullfile(figFolder,'summary_dashboard.png'));
+
+
+%% Save Workspace
+
+save(fullfile(resultsFolder,'analysis_results.mat'));
